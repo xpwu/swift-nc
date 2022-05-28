@@ -75,6 +75,112 @@ class swiftncTests: XCTestCase {
 		
 		self.wait(for: [expectation], timeout: 10)
 	}
+	
+	func testAll() async {
+		let expectation = self.expectation(description: "testAll")
+		
+		var postTimes = 0
+		
+		var userInfoChangedBlock3 = 0
+		
+		let userInfoChangedVar = ["a", "b"]
+		
+		var userInfoChangedBlockEver = 0
+		
+		var buildBlockEver = 0
+		
+		var buildBlock = 0
+		
+		let buildBlockVar = [12, 45]
+		
+		var uploadProgressChangedBlock = 0
+		
+		let uploadProgressChangedVar = ["dkjfd"]
+		
+		
+		NC.default.add(event: UserInfoChanged.E) { e, removeIt in
+			userInfoChangedBlock3 += 1
+			XCTAssertEqual(e.getIds(), userInfoChangedVar)
+			
+			if 3 == userInfoChangedBlock3 {
+				removeIt()
+			}
+		}
+		
+		NC.default.add(event: UserInfoChanged.E) { e, _ in
+			userInfoChangedBlockEver += 1
+			XCTAssertEqual(e.getIds(), userInfoChangedVar)
+		}
+		
+		var autoRelease: Observer? = Observer()
+		
+		NC.default.addObserver(autoRelease!, forEvent: UploadProgressChanged.E) { e in
+			uploadProgressChangedBlock += 1
+			XCTAssertEqual(e.getIds(), uploadProgressChangedVar)
+		}
+		
+		let o = Observer()
+		
+		NC.default.addObserver(o, forEvent: Built.E) { e in
+			buildBlockEver += 1
+			XCTAssertEqual(e.getIds(), buildBlockVar)
+		}
+		
+		let oRemove = Observer()
+		
+		NC.default.addObserver(oRemove, forEvent: Built.E) { e in
+			buildBlock += 1
+			XCTAssertEqual(e.getIds(), buildBlockVar)
+		}
+		
+		
+		
+		_ = Timer.scheduledTimer(withTimeInterval: 0.3, repeats: true) { timer in
+			postTimes += 1
+			
+			NC.default.post(Built.init(buildBlockVar))
+			NC.default.post(UserInfoChanged.init(userInfoChangedVar))
+			NC.default.post(UploadProgressChanged.init(uploadProgressChangedVar))
+			
+			XCTAssertEqual(buildBlockEver, postTimes)
+			XCTAssertEqual(userInfoChangedBlockEver, postTimes)
+			
+			let userInfoChangedBlock3C = 3
+			if postTimes <= userInfoChangedBlock3C {
+				XCTAssertEqual(userInfoChangedBlock3, postTimes)
+			} else {
+				XCTAssertEqual(userInfoChangedBlock3, userInfoChangedBlock3C)
+			}
+			
+			let autoReleaseC = 7
+			if postTimes == autoReleaseC {
+				autoRelease = nil
+			}
+			if postTimes <= autoReleaseC {
+				XCTAssertEqual(uploadProgressChangedBlock, postTimes)
+			} else {
+				XCTAssertEqual(uploadProgressChangedBlock, autoReleaseC)
+			}
+			
+			let removeC = 9
+			if postTimes == removeC {
+				NC.default.removeObserver(oRemove)
+			}
+			if postTimes <= removeC {
+				XCTAssertEqual(buildBlock, postTimes)
+			} else {
+				XCTAssertEqual(buildBlock, removeC)
+			}
+			
+			
+			if postTimes == 13 {
+				timer.invalidate()
+				expectation.fulfill()
+			}
+		}
+		
+		self.wait(for: [expectation], timeout: 10)
+	}
 
     func testPerformanceExample() throws {
         // This is an example of a performance test case.

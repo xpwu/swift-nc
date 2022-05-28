@@ -52,6 +52,7 @@ public class NC {
 		self.nc = nc
 	}
 	
+	// must call removeIt to remove this event
 	public func add<IDType, T:Event<IDType>>(event e: T
 							, _ block: @escaping (_ e: T, _ removeIt: ()->Void)->Void) {
 		let o = self.addObserverInner(forEvent: e, { [unowned self] e, o in
@@ -63,6 +64,7 @@ public class NC {
 		o.bindObject = o
 	}
   
+	// auto remove this observer or call removeObserver to remove
 	public func addObserver<U: AnyObject, IDType, T:Event<IDType>>(_ observer: U
 							, forEvent e: T, _ block: @escaping (_ e: T)->Void) {
 
