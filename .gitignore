@@ -90,3 +90,4 @@ fastlane/test_output
 iOSInjectionProject/
 swiftnc/swiftnc.xcodeproj/project.xcworkspace/contents.xcworkspacedata
 swiftnc/swiftnc.xcodeproj/project.xcworkspace/xcshareddata/IDEWorkspaceChecks.plist
+.swiftpm/xcode/package.xcworkspace/contents.xcworkspacedata

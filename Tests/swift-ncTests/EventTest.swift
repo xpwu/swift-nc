@@ -6,7 +6,7 @@
 //
 
 import Foundation
-@testable import swiftnc
+@testable import xpwu_nc
 
 class UploadProgressChanged: EventStr {
 	
