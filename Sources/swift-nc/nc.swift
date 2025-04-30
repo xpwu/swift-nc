@@ -26,7 +26,7 @@ fileprivate class Observer<T:EventProtocol> : NCObserverItem {
 	}
 }
 
-fileprivate class Value<T:EventProtocol> {
+fileprivate final class Value<T:EventProtocol> {
 	weak var observer: Observer<T>?
 	var block: (_ e: T) async ->Void
 	var id: UInt64
@@ -75,9 +75,9 @@ fileprivate actor Num {
 	}
 }
 
-fileprivate class Queue<T:EventProtocol> {
-	var dic:DicActor<UInt64, Value<T>> = DicActor()
-	var idNum:Num = Num()
+fileprivate final class Queue<T:EventProtocol> {
+	let dic:DicActor<UInt64, Value<T>> = DicActor()
+	let idNum:Num = Num()
 	
 	// post 执行过程中，某个 block 可能调用 add / remove 方法，
 	// 所以，post 需要拿到 [blocks] 后，再执行 block，防止与 add / remove 互锁在 actor 上
@@ -125,9 +125,9 @@ fileprivate actor EventQueue {
 	}
 }
 
-public class NC {
+public final class NC: Sendable {
 	
-	private var events = EventQueue()
+	private let events = EventQueue()
 	fileprivate let uuid = UUID()
 	
 	public func addEvent<T:EventProtocol>(_ e: T.Type
