@@ -16,5 +16,3 @@ class UserInfoChanged: EventStr {}
 
 class Built: EventInt {}
 
-
-class Observer {}
