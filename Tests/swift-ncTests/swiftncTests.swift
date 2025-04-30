@@ -42,41 +42,38 @@ class swiftncTests: XCTestCase {
 	func testEvent() throws {
 		XCTAssertEqual(UserInfoChanged.self.name, UserInfoChanged.name)
 		XCTAssertEqual(UserInfoChanged.self.name
-									 , Notification.Name(rawValue: "swiftncTests.UserInfoChanged"))
+									 , Notification.Name(rawValue: "xpwu_ncTests.UserInfoChanged"))
 		XCTAssertNotEqual(UploadProgressChanged.self.name, UserInfoChanged.self.name)
 		XCTAssertNotEqual(UploadProgressChanged.self.name, Built.self.name)
 	}
-	
-//	func testO1() {
-//		NC.default.addObserver1(self, forEvent: UserInfoChanged.self) { e in
-//			let a = e.getIds()
-//		}
-//	}
+
 	
 	func testAdd() async {
-		let expectation = self.expectation(description: "testAdd")
 		
-		var times = IntActor()
-		var eventB = IntActor()
+		let times = IntActor()
+		let eventB = IntActor()
 		
-		await NC.default.add(event: UserInfoChanged.self) { e, removeIt in
+		let nc = NC()
+		
+		var item: NCObserverItem? = nil
+		item = await nc.addEvent(UserInfoChanged.self) { e in
 			if await times.value() == 3 {
-				await removeIt()
+				await item?.remove()
 			}
 
 			await eventB.plus()
 			XCTAssertEqual(e.ids, ["a", "b"])
 		}
 		
-		await NC.default.add(event: Built.self) { e, removeIt in
+		_ = await nc.addEvent(Built.self) { e in
 			XCTAssertFalse(true)
 		}
 		
-		_ = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { [times,eventB] timer in
-			Task {
+		while await times.value() < 5 {
+			let t = Task { [eventB, times] in
 				await times.plus()
 				if await times.value() <= 3 {
-					await NC.default.post(UserInfoChanged.init(["a", "b"]))
+					await nc.post(UserInfoChanged.init(["a", "b"]))
 					
 					let eb = await eventB.value()
 					let t = await times.value()
@@ -84,126 +81,119 @@ class swiftncTests: XCTestCase {
 					return
 				}
 				
-				await NC.default.post(UserInfoChanged.init(["c", "d"]))
+				await nc.post(UserInfoChanged.init(["c", "d"]))
 				
 				let eb = await eventB.value()
 				let t = await times.value()
 				XCTAssertNotEqual(eb, t)
 				
-				if await times.value() == 5 {
-					timer.invalidate()
-					expectation.fulfill()
-				}
 			}
+			
+			await t.value
 		}
-		
-		await self.fulfillment(of: [expectation], timeout: 10)
 	}
 	
 	func testAll() async {
-		let expectation = self.expectation(description: "testAll")
+//		let expectation = self.expectation(description: "testAll")
 		
-		var postTimes = 0
+		let postTimes = IntActor()
 		
-		var userInfoChangedBlock3 = 0
+		let userInfoChangedBlock3 = IntActor()
 		
 		let userInfoChangedVar = ["a", "b"]
 		
-		var userInfoChangedBlockEver = 0
+		let userInfoChangedBlockEver = IntActor()
 		
-		var buildBlockEver = 0
+		let buildBlockEver = IntActor()
 		
-		var buildBlock = 0
+		let buildBlock = IntActor()
 		
 		let buildBlockVar = [12, 45]
 		
-		var uploadProgressChangedBlock = 0
+		let uploadProgressChangedBlock = IntActor()
 		
 		let uploadProgressChangedVar = ["dkjfd"]
 		
+		let nc = NC()
 		
-		await NC.default.add(event: UserInfoChanged.self) { e, removeIt in
-			userInfoChangedBlock3 += 1
+		
+		var item1: NCObserverItem? = nil
+		item1 = await nc.addEvent(UserInfoChanged.self) { e in
+			await userInfoChangedBlock3.plus()
 			XCTAssertEqual(e.ids, userInfoChangedVar)
 			
-			if 3 == userInfoChangedBlock3 {
-				await removeIt()
+			if await userInfoChangedBlock3.value() == 3 {
+				await item1?.remove()
 			}
 		}
 		
-		await NC.default.add(event: UserInfoChanged.self) { e, _ in
-			userInfoChangedBlockEver += 1
+		let item2 = await nc.addEvent(UserInfoChanged.self) { e in
+			await	userInfoChangedBlockEver.plus()
 			XCTAssertEqual(e.ids, userInfoChangedVar)
 		}
 		
-		var autoRelease: Observer? = Observer()
-		
-		await NC.default.addObserver(autoRelease!, forEvent: UploadProgressChanged.self) { e in
-			uploadProgressChangedBlock += 1
+		var autoRelease: NCObserverItem? = await nc.addEvent(UploadProgressChanged.self) { e in
+			await uploadProgressChangedBlock.plus()
 			XCTAssertEqual(e.ids, uploadProgressChangedVar)
 		}
 		
-		let o = Observer()
-		
-		await NC.default.addObserver(o, forEvent: Built.self) { e in
-			buildBlockEver += 1
+		let o = await nc.addEvent(Built.self) { e in
+			await buildBlockEver.plus()
 			XCTAssertEqual(e.ids, buildBlockVar)
 		}
 		
-		let oRemove = Observer()
-		
-		await NC.default.addObserver(oRemove, forEvent: Built.self) { e in
-			buildBlock += 1
+		let oRemove = await nc.addEvent(Built.self) { e in
+			await buildBlock.plus()
 			XCTAssertEqual(e.ids, buildBlockVar)
 		}
 		
-		
-		
-		_ = Timer.scheduledTimer(withTimeInterval: 0.3, repeats: true) { timer in
-			postTimes += 1
-			
-			NC.default.post(Built.init(buildBlockVar))
-			NC.default.post(UserInfoChanged.init(userInfoChangedVar))
-			NC.default.post(UploadProgressChanged.init(uploadProgressChangedVar))
-			
-			XCTAssertEqual(buildBlockEver, postTimes)
-			XCTAssertEqual(userInfoChangedBlockEver, postTimes)
-			
-			let userInfoChangedBlock3C = 3
-			if postTimes <= userInfoChangedBlock3C {
-				XCTAssertEqual(userInfoChangedBlock3, postTimes)
-			} else {
-				XCTAssertEqual(userInfoChangedBlock3, userInfoChangedBlock3C)
+		while await postTimes.value() < 13 {
+			let t = Task {
+				await postTimes.plus()
+				
+				await nc.post(Built.init(buildBlockVar))
+				await nc.post(UserInfoChanged.init(userInfoChangedVar))
+				await nc.post(UploadProgressChanged.init(uploadProgressChangedVar))
+				
+				var v1 = await buildBlockEver.value()
+				let pt = await postTimes.value()
+				XCTAssertEqual(v1, pt)
+				v1 = await userInfoChangedBlockEver.value()
+				XCTAssertEqual(v1, pt)
+				
+				let userInfoChangedBlock3C = 3
+				v1 = await userInfoChangedBlock3.value()
+				if pt <= userInfoChangedBlock3C {
+					XCTAssertEqual(v1, pt)
+				} else {
+					XCTAssertEqual(v1, userInfoChangedBlock3C)
+				}
+				
+				let autoReleaseC = 7
+				if pt == autoReleaseC {
+					autoRelease = nil
+				}
+				v1 = await uploadProgressChangedBlock.value()
+				if pt <= autoReleaseC {
+					XCTAssertEqual(v1, pt)
+				} else {
+					XCTAssertEqual(v1, autoReleaseC)
+				}
+				
+				let removeC = 9
+				if pt == removeC {
+					await oRemove.remove()
+				}
+				v1 = await buildBlock.value()
+				if pt <= removeC {
+					XCTAssertEqual(v1, pt)
+				} else {
+					XCTAssertEqual(v1, removeC)
+				}
 			}
 			
-			let autoReleaseC = 7
-			if postTimes == autoReleaseC {
-				autoRelease = nil
-			}
-			if postTimes <= autoReleaseC {
-				XCTAssertEqual(uploadProgressChangedBlock, postTimes)
-			} else {
-				XCTAssertEqual(uploadProgressChangedBlock, autoReleaseC)
-			}
-			
-			let removeC = 9
-			if postTimes == removeC {
-				NC.default.removeObserver(oRemove)
-			}
-			if postTimes <= removeC {
-				XCTAssertEqual(buildBlock, postTimes)
-			} else {
-				XCTAssertEqual(buildBlock, removeC)
-			}
-			
-			
-			if postTimes == 13 {
-				timer.invalidate()
-				expectation.fulfill()
-			}
+			await t.value
 		}
-		
-		self.wait(for: [expectation], timeout: 10)
 	}
 
     func testPerformanceExample() throws {
