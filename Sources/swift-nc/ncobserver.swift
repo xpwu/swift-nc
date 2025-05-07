@@ -21,7 +21,7 @@ extension NCObserverKey: Hashable {}
 public typealias NCEvents = DicActor<NCObserverKey, NCObserverItem>
 
 public protocol NCObserver {
-	var events: NCEvents {get set}
+	var events: NCEvents {get}
 }
 
 extension NCObserver {
