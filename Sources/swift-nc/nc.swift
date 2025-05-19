@@ -12,7 +12,7 @@ public protocol NCObserverItem: AnyObject {
 	func remove() async
 }
 
-fileprivate class Observer<T:EventProtocol> : NCObserverItem {
+fileprivate class ObserverItem<T:EventProtocol> : NCObserverItem {
   unowned var queue: Queue<T>
   var id: UInt64
 
@@ -27,12 +27,12 @@ fileprivate class Observer<T:EventProtocol> : NCObserverItem {
 }
 
 fileprivate final class Value<T:EventProtocol> {
-	weak var observer: Observer<T>?
+	weak var observerItem: ObserverItem<T>?
 	var block: (_ e: T) async ->Void
 	var id: UInt64
 	
-	init(observer: Observer<T>, block: @escaping (_: T) async -> Void, _ id: UInt64) {
-		self.observer = observer
+	init(observer: ObserverItem<T>, block: @escaping (_: T) async -> Void, _ id: UInt64) {
+		self.observerItem = observer
 		self.block = block
 		self.id = id
 	}
@@ -85,7 +85,7 @@ fileprivate final class Queue<T:EventProtocol> {
 		var needDel: [UInt64] = []
 		
 		for value in await dic.values() {
-			if value.observer == nil {
+			if value.observerItem == nil {
 				needDel.append(value.id)
 				continue
 			}
@@ -98,7 +98,7 @@ fileprivate final class Queue<T:EventProtocol> {
 	
 	func add(_ block: @escaping (_ e: T) async ->Void) async -> NCObserverItem {
 		let id = await idNum.get()
-		let obsever = Observer(self, id)
+		let obsever = ObserverItem(self, id)
 		await dic.add(id, Value(observer: obsever, block: block, id))
 		
 		return obsever
