@@ -14,26 +14,28 @@ public protocol NCObserverItem: AnyObject {
 
 fileprivate class ObserverItem<T:EventProtocol> : NCObserverItem {
   unowned var queue: Queue<T>
+	var block: ((_ e: T) async ->Void)?
   var id: UInt64
 
-	init (_ queue: Queue<T>, _ id: UInt64) {
+	init (_ queue: Queue<T>, _ id: UInt64, _ block: @escaping (_ e: T) async ->Void) {
     self.queue = queue
     self.id = id
+		self.block = block
   }
 	
 	func remove() async {
 		await self.queue.remove(self.id)
+		// 释放引用
+		self.block = nil
 	}
 }
 
 fileprivate final class Value<T:EventProtocol> {
 	weak var observerItem: ObserverItem<T>?
-	var block: (_ e: T) async ->Void
 	var id: UInt64
 	
-	init(observer: ObserverItem<T>, block: @escaping (_: T) async -> Void, _ id: UInt64) {
+	init(observer: ObserverItem<T>, _ id: UInt64) {
 		self.observerItem = observer
-		self.block = block
 		self.id = id
 	}
 }
@@ -90,7 +92,7 @@ fileprivate final class Queue<T:EventProtocol> {
 				continue
 			}
 			
-			await value.block(e)
+			await value.observerItem?.block?(e)
 		}
 		
 		await dic.remove(needDel)
@@ -98,8 +100,8 @@ fileprivate final class Queue<T:EventProtocol> {
 	
 	func add(_ block: @escaping (_ e: T) async ->Void) async -> NCObserverItem {
 		let id = await idNum.get()
-		let obsever = ObserverItem(self, id)
-		await dic.add(id, Value(observer: obsever, block: block, id))
+		let obsever = ObserverItem(self, id, block)
+		await dic.add(id, Value(observer: obsever, id))
 		
 		return obsever
 	}
