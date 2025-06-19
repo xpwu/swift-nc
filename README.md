@@ -1,6 +1,9 @@
 # swiftnc
 支持 swift 语言的通知中心，支持 async 调用，支持 Sendable 协议，并发安全
 
+## 0、代码库的引用
+使用 SwiftPM 引用此 github 库即可
+
 ## 1、event
 * 满足 EventProtocol 协议的即可成为 Event，一个类即代表一个事件。已提供携带 String/Int 类型参数的 base class，定一个继承类即可定义一个新的事件
 	```swift
@@ -63,6 +66,6 @@ NC 不会持有 NCObserverItem
 * 返回的 Item 需要由调用层管理。
 * block 中如果需要用到 Item 的管理者对象(包括 extension NCObserver 的对象) 或者 Item 自身，
 都建议使用 weak 得捕获方式，防止循环引用。
-* 调用 item.remove() 或者 observer.removeAll() 都将切断 Item 对 block 的持有。
+* 调用 item.remove()、observer.removeEvent(from) 或者 observer.removeAll() 都将切断 Item 对 block 的持有。
 * 如果 Item 被释放，NC 会自动 remove 此 Item 对应的事件，但是为了防止 block 中引起的循环引用，
-所有的 Item 都建议通过 item.remove() 或者 observer.removeAll() 手动删除
+所有的 Item 都建议通过 item.remove()、observer.removeEvent(from) 或者 observer.removeAll() 手动删除
